@@ -1,0 +1,449 @@
+
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071923">
+  <meta name="description" content="Klasifikasi tingkat kesegaran buah belimbing menggunakan CNN MobileNetV3-Small.">
+  <title>BelimbingAI — Klasifikasi Kesegaran</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <nav class="topbar">
+    <a class="brand" href="/" aria-label="BelimbingAI beranda">
+      <span class="brand-mark">✳</span>
+      <span>
+        <strong>Belimbing<span>AI</span></strong>
+        <small>AI FRESHNESS CLASSIFIER</small>
+      </span>
+    </a>
+
+    <div class="nav-right">
+      <span class="status-dot"></span>
+      <span>AI freshness classification</span>
+    </div>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow">
+          <span class="eyebrow-line"></span>
+          KLASIFIKASI CITRA BERBASIS AI
+        </div>
+
+        <h1>
+          Klasifikasi Tingkat<br>
+          Kesegaran <em>Buah Belimbing</em>
+        </h1>
+
+        <p class="hero-desc">
+          Unggah foto buah belimbing untuk mengetahui tingkat
+          kesegarannya 
+        </p>
+
+        <div class="hero-points">
+          <span><b>01</b> Unggah foto</span>
+          <i></i>
+          <span><b>02</b> Analisis AI</span>
+          <i></i>
+          <span><b>03</b> Lihat hasil</span>
+        </div>
+      </div>
+
+      <div class="hero-art" aria-hidden="true">
+        <div class="art-orbit orbit-one"></div>
+        <div class="art-orbit orbit-two"></div>
+        <div class="art-glow"></div>
+        <div class="fruit-emoji">✳</div>
+
+        <div class="art-label label-top">
+          <span class="mini-dot"></span>
+          IMAGE RECOGNITION
+        </div>
+
+        <div class="art-label label-bottom">
+          <span>✦</span> Freshness insights
+        </div>
+
+        <div class="art-leaf leaf-one"></div>
+        <div class="art-leaf leaf-two"></div>
+      </div>
+    </section>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <section class="workspace">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">AI CLASSIFICATION</span>
+          <h2>Klasifikasi Kesegaran</h2>
+        </div>
+
+        <span class="step-tag">
+          <span class="step-number">1</span>
+          INPUT CITRA
+        </span>
+      </div>
+
+      <div class="main-grid">
+        <!-- PANEL UPLOAD -->
+        <section class="panel upload-panel">
+          <div class="panel-head">
+            <div class="panel-icon">↥</div>
+            <div>
+              <h3>Unggah Gambar</h3>
+              <p>Pilih foto belimbing yang jelas dengan pencahayaan cukup.</p>
+            </div>
+          </div>
+
+          <form method="post" enctype="multipart/form-data" id="uploadForm">
+            <label class="dropzone" for="fruitImage" id="dropzone">
+              <div class="upload-symbol">
+                <svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
+                  <path d="M24 31V8m0 0-8 8m8-8 8 8"
+                    stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M10 29v8a3 3 0 0 0 3 3h22a3 3 0 0 0 3-3v-8"
+                    stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round"/>
+                </svg>
+              </div>
+
+              <strong id="uploadTitle">Klik untuk mengunggah gambar</strong>
+              <span id="uploadSub">atau tarik foto ke area ini</span>
+              <span class="file-types">
+                Format JPG, JPEG, PNG atau WebP
+                <b>•</b> Maksimal 8 MB
+              </span>
+
+              <input
+                id="fruitImage"
+                name="fruit_image"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                required
+              >
+            </label>
+
+            <div class="preview-wrap" id="previewWrap" hidden>
+              <img id="previewImage" alt="Pratinjau foto belimbing">
+
+              <div class="preview-info">
+                <strong id="fileName">Foto terpilih</strong>
+                <span id="fileSize"></span>
+              </div>
+
+              <button type="button" class="text-button" id="removeImage">
+                Hapus foto
+              </button>
+            </div>
+
+            <button
+              class="primary-button"
+              type="submit"
+              id="submitButton"
+              {% if not model_ready %}disabled{% endif %}
+            >
+              <span>Mulai Klasifikasi</span>
+              <span class="button-arrow">↗</span>
+            </button>
+
+            {% if not model_ready %}
+              <p class="model-warning">
+                Model belum berhasil dimuat. Periksa instalasi dan file model.
+              </p>
+            {% endif %}
+
+            <p class="privacy-note">
+              ◇ Foto diproses oleh aplikasi ini untuk menghasilkan prediksi.
+            </p>
+          </form>
+        </section>
+
+        <!-- PANEL HASIL -->
+        <section class="panel result-panel">
+          <div class="panel-head result-head">
+            <div class="panel-icon">⌁</div>
+
+            <div>
+              <h3>Hasil Klasifikasi</h3>
+              <p>Hasil nya</p>
+            </div>
+
+            <span class="step-tag">
+              <span class="step-number">2</span>
+              OUTPUT
+            </span>
+          </div>
+
+          {% if result %}
+            <div class="result-content">
+              <div class="result-top">
+                <div class="result-image">
+                  <img src="{{ image_url }}" alt="Foto belimbing yang dianalisis">
+                </div>
+
+                <div class="result-summary">
+                  <span class="result-label">KELAS TERDETEKSI</span>
+
+                  <div class="result-title {{ result.tone }}">
+                    <span class="result-symbol">{{ result.icon }}</span>
+                    <h4>{{ result.title }}</h4>
+                  </div>
+
+                  <p>{{ result.description }}</p>
+                </div>
+              </div>
+
+              <div class="confidence-card">
+                <div class="confidence-line">
+                  <span>Tingkat keyakinan model</span>
+                  <strong>{{ "%.2f"|format(result.confidence) }}%</strong>
+                </div>
+
+                <div class="progress-track">
+                  <div
+                    class="progress-fill {{ result.tone }}"
+                    style="width: {{ result.confidence }}%"
+                  ></div>
+                </div>
+
+                <small>
+                  Nilai keyakinan model bukan jaminan kondisi buah secara mutlak.
+                </small>
+              </div>
+
+              <div class="probability-section">
+                <h5>Distribusi Probabilitas</h5>
+
+                {% for p in result.probabilities %}
+                  <div class="probability-row">
+                    <div class="probability-name">
+                      <span class="prob-dot {{ p.name|lower|replace(' ', '-') }}"></span>
+                      {{ p.title }}
+                    </div>
+
+                    <div class="probability-track">
+                      <div
+                        class="probability-fill {{ p.name|lower|replace(' ', '-') }}"
+                        style="width: {{ p.value }}%"
+                      ></div>
+                    </div>
+
+                    <strong>{{ "%.1f"|format(p.value) }}%</strong>
+                  </div>
+                {% endfor %}
+              </div>
+
+              <div class="advice">
+                <span class="advice-icon">i</span>
+                <p><strong>Catatan</strong> {{ result.advice }}</p>
+              </div>
+
+              <button
+                class="secondary-button"
+                type="button"
+                onclick="window.location.href='/'"
+              >
+                Analisis Foto Lain <span>↗</span>
+              </button>
+            </div>
+
+          {% else %}
+            <div class="empty-result">
+              <div class="empty-illustration">
+                <div class="empty-ring"></div>
+
+                <div class="empty-card">
+                  <span>✳</span>
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                </div>
+
+                <div class="empty-spark spark-a">✦</div>
+                <div class="empty-spark spark-b">✧</div>
+              </div>
+
+              <h4>Belum Ada Gambar yang Diproses</h4>
+
+              <p>
+                Unggah foto belimbing untuk menampilkan hasil klasifikasi
+                dan persentase probabilitas setiap kelas.
+              </p>
+
+              <div class="class-chips">
+                <span class="chip-fresh">● Segar</span>
+                <span class="chip-warning">● Tidak Segar</span>
+                <span class="chip-rotten">● Busuk</span>
+              </div>
+            </div>
+          {% endif %}
+        </section>
+      </div>
+    </section>
+
+    <!-- INFORMASI MODEL -->
+    <section class="method-strip">
+      <div class="method-title">
+        <span class="section-kicker">TENTANG SISTEM</span>
+        <h3>Dirancang untuk<br>analisis citra buah.</h3>
+      </div>
+
+      <div class="method-item">
+        <span class="method-number">01</span>
+        <div>
+          <strong>M</strong>
+          <p>Arsitektur CNN efisien untuk ekstraksi fitur citra.</p>
+        </div>
+      </div>
+
+      <div class="method-item">
+        <span class="method-number">02</span>
+        <div>
+          <strong>Input 224 × 224 px</strong>
+          <p>Foto disesuaikan ukurannya sebelum diprediksi.</p>
+        </div>
+      </div>
+
+      <div class="method-item">
+        <span class="method-number">03</span>
+        <div>
+          <strong>3 Kelas Keluaran</strong>
+          <p>Segar, tidak segar, dan busuk.</p>
+        </div>
+      </div>
+    </section>
+
+    <p class="disclaimer">
+      BelimbingAI merupakan prototipe penelitian akademik.
+      Hasil klasifikasi dapat dipengaruhi pencahayaan, sudut pengambilan
+      gambar, dan kualitas citra. Gunakan pemeriksaan langsung sebagai
+      pertimbangan tambahan.
+    </p>
+  </main>
+
+  <footer>
+    <div class="footer-brand">✳ BelimbingAI</div>
+    <span>Prototipe penelitian ·</span>
+    <span>© 2026</span>
+  </footer>
+
+  <script>
+    const input = document.getElementById('fruitImage');
+    const zone = document.getElementById('dropzone');
+    const wrap = document.getElementById('previewWrap');
+    const preview = document.getElementById('previewImage');
+    const title = document.getElementById('uploadTitle');
+    const sub = document.getElementById('uploadSub');
+    const submit = document.getElementById('submitButton');
+    const form = document.getElementById('uploadForm');
+
+    function showFile(file) {
+      if (!file) return;
+
+      const allowedTypes = [
+        'image/jpeg',
+        'image/png',
+        'image/webp'
+      ];
+
+      if (!allowedTypes.includes(file.type)) {
+        alert('Pilih file JPG, JPEG, PNG, atau WebP.');
+        input.value = '';
+        return;
+      }
+
+      if (file.size > 8 * 1024 * 1024) {
+        alert('Ukuran file maksimal 8 MB.');
+        input.value = '';
+        return;
+      }
+
+      if (preview.dataset.objectUrl) {
+        URL.revokeObjectURL(preview.dataset.objectUrl);
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      preview.src = objectUrl;
+      preview.dataset.objectUrl = objectUrl;
+
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent =
+        (file.size / 1024 / 1024).toFixed(2) + ' MB';
+
+      wrap.hidden = false;
+      zone.classList.add('has-file');
+
+      title.textContent = 'Foto siap dianalisis';
+      sub.textContent = 'Pratinjau foto pilihan Anda';
+
+      submit.disabled = false;
+    }
+
+    input.addEventListener('change', () => {
+      showFile(input.files[0]);
+    });
+
+    document.getElementById('removeImage').addEventListener('click', () => {
+      input.value = '';
+      wrap.hidden = true;
+      zone.classList.remove('has-file');
+
+      title.textContent = 'Klik untuk mengunggah gambar';
+      sub.textContent = 'atau tarik foto ke area ini';
+
+      if (preview.dataset.objectUrl) {
+        URL.revokeObjectURL(preview.dataset.objectUrl);
+        delete preview.dataset.objectUrl;
+      }
+
+      preview.removeAttribute('src');
+      submit.disabled = {% if model_ready %}false{% else %}true{% endif %};
+    });
+
+    zone.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      zone.classList.add('dragover');
+    });
+
+    zone.addEventListener('dragleave', () => {
+      zone.classList.remove('dragover');
+    });
+
+    zone.addEventListener('drop', (event) => {
+      event.preventDefault();
+      zone.classList.remove('dragover');
+
+      const file = event.dataTransfer.files[0];
+      if (!file) return;
+
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      input.files = transfer.files;
+
+      showFile(file);
+    });
+
+    form.addEventListener('submit', () => {
+      submit.disabled = true;
+      submit.querySelector('span:first-child').textContent =
+        'Sedang menganalisis…';
+    });
+  </script>
+</body>
+</html>
